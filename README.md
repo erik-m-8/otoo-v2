@@ -1,6 +1,6 @@
 # Discord Otto Bot
 
-A Discord bot built with discord.js featuring slash commands.
+A Discord bot to auto send messages to a channel with up to date stock.
 
 ## Setup
 
@@ -14,9 +14,11 @@ npm install
 
 Create a `.env` file based on `.env.example`:
 
+Thanks Romann for the easy API
 ```bash
 DISCORD_TOKEN=your_bot_token_here
 CLIENT_ID=your_client_id_here
+API_STREAM_URL=https://mg-api.ariedam.fr/
 ```
 
 ### 3. Deploy Commands
@@ -38,52 +40,12 @@ Or for development with auto-reload:
 ```bash
 npm run dev
 ```
+## setup
+/setup channel -- this is the channel the bot will right to.
+/setup hide -- this will hide non mentions 
 
-## Creating New Commands
-
-Create a new file in the `commands/` directory:
-
-```javascript
-const { SlashCommandBuilder } = require('discord.js');
-
-module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('command-name')
-    .setDescription('Command description'),
-  
-  async execute(interaction) {
-    await interaction.reply('Command response');
-  },
-};
-```
-
-Then redeploy commands:
-
-```bash
-node deploy-commands.js
-```
-
-## Project Structure
-
-```
-discord-otto/
-├── commands/              # Slash command files
-│   └── ping.js           # Example ping command
-├── index.js              # Main bot file
-├── deploy-commands.js    # Command deployment script
-├── package.json
-├── .env.example
-├── .gitignore
-└── README.md
-```
-
-## Features
-
-- ✅ Slash command handler
-- ✅ Automatic command loading
-- ✅ Error handling
-- ✅ Environment configuration
-- ✅ Command deployment script
+## Disclaimer
+This was written quickly and is messy but has been stable and working. Im releasing it for others to use and I will maybe update it later. 
 
 ## Resources
 
