@@ -21,15 +21,10 @@ client.once("ready", () => {
   console.log(`\n✅ Bot logged in as ${client.user.tag}\n`);
   // Initialize stream listener (background task)
   let ShopListener = null;
-  let WeatherListener = null;
   if (process.env.API_STREAM_URL) {
     ShopListener = new StreamListener(
       client,
-      process.env.API_STREAM_URL + "live/shops/stream",
-    );
-    WeatherListener = new StreamListener(
-      client,
-      process.env.API_STREAM_URL + "live/weather/stream",
+      process.env.API_STREAM_URL + "live/stream",
     );
   }
   // Initialize message service
@@ -42,11 +37,6 @@ client.once("ready", () => {
   if (ShopListener) {
     ShopListener.start().catch((err) => {
       console.error("Failed to start stream listener:", err);
-    });
-  }
-  if (WeatherListener) {
-    WeatherListener.start().catch((err) => {
-      console.error("Failed to start weather stream listener:", err);
     });
   }
 });
