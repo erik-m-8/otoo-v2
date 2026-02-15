@@ -13,8 +13,8 @@ db.initialize().then(() => {
   // Start Ably service and subscribe to channels
   return ablyService.connect().then(() => {
     return Promise.all([
-      ablyService.subscribe("persisted:shops"),
-      ablyService.subscribe("persisted:weather"), 
+      ablyService.subscribe("persisted.shops"),
+      ablyService.subscribe("persisted.weather"), 
     ]);
   }).then(() => {
     ablyService.onMessage((data) => {
