@@ -1,97 +1,125 @@
-const sqlite3 = require("sqlite3").verbose();
-const path = require("path");
+const { Pool } = require("pg");
 
-const dbPath = path.join(__dirname, "..", "database.db");
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  //ssl: false,
+  ssl: { rejectUnauthorized: false },
+  max: 10,
+  idleTimeoutMillis: 30_000,
+  connectionTimeoutMillis: 10_000,
+});
 
 class Database {
   constructor() {
-    this.db = new sqlite3.Database(dbPath, (err) => {
-      if (err) {
-        console.error("Error opening database:", err.message);
-      } else {
-        console.log("✓ Connected to SQLite database");
-        this.initialize();
-      }
+    this.pool = pool;
+    pool.on("error", (err) => {
+      console.error("Unexpected error on idle client", err);
+    });
+    pool.on("connect", () => {
+      console.log("✓ Connected to PostgreSQL database");
     });
   }
 
   initialize() {
-    // Enable foreign keys
-    this.db.run("PRAGMA foreign_keys = ON");
+    return new Promise(async (resolve, reject) => {
+      try {
+        // Create tables if they don't exist
+        await this.run(`
+          CREATE TABLE IF NOT EXISTS workers (
+            id SERIAL PRIMARY KEY,
+            token TEXT NOT NULL UNIQUE,
+            client_id TEXT,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
 
-    // Create default tables if they don't exist
-    this.db.run(`
-        CREATE TABLE IF NOT EXISTS guild_config (
+        await this.run(`
+          CREATE TABLE IF NOT EXISTS guild_config (
             guild_id TEXT PRIMARY KEY,
             channel_id TEXT,
-            hide_non_roles BOOLEAN DEFAULT 0
-        );
-    `);
+            hide_non_roles BOOLEAN DEFAULT FALSE,
+            worker_id INTEGER,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(worker_id) REFERENCES workers(id) ON DELETE SET NULL
+          );
+        `);
 
-    this.db.run(`
-        CREATE TABLE IF NOT EXISTS events (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,  -- unique sequential ID
-            type TEXT NOT NULL,                     -- type of event, e.g., "user_joined"
-            payload TEXT NOT NULL,                  -- JSON string with event data
-            status TEXT NOT NULL DEFAULT 'new',     -- 'new', 'processing', 'done', 'failed'
-            retry_count INTEGER NOT NULL DEFAULT 0, -- how many times we've tried processing
-            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-    `);
+        await this.run(`
+          CREATE TABLE IF NOT EXISTS events (
+            id SERIAL PRIMARY KEY,
+            type TEXT NOT NULL,
+            payload JSONB NOT NULL,
+            status TEXT NOT NULL DEFAULT 'new',
+            retry_count INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+          );
+        `);
+
+        // Insert tokens from environment variables
+        const tokens = [
+          { token: process.env.DISCORD_TOKEN, client_id: process.env.CLIENT_ID },
+         // { token: process.env.DISCORD_TOKEN_2, client_id: process.env.CLIENT_ID_2 },
+         // { token: process.env.DISCORD_TOKEN_3, client_id: process.env.CLIENT_ID_3 },
+         // { token: process.env.DISCORD_TOKEN_4, client_id: process.env.CLIENT_ID_4 },
+        ].filter(Boolean);
+
+        for (const token of tokens) {
+          try {
+            await this.run(
+              `INSERT INTO workers (token, client_id) VALUES ($1, $2) ON CONFLICT (token) DO NOTHING`,
+              [token.token, token.client_id]
+            );
+            console.log("✓ Token inserted into workers table");
+          } catch (err) {
+            console.error("Error inserting token into workers table:", err.message);
+          }
+        }
+
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    });
   }
 
   /**
    * Run a query (INSERT, UPDATE, DELETE)
    */
   run(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.run(sql, params, function (err) {
-        if (err) reject(err);
-        else resolve(this);
-      });
-    });
+    return this.pool.query(sql, params);
   }
 
   /**
    * Get a single row
    */
-  get(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.get(sql, params, (err, row) => {
-        if (err) reject(err);
-        else resolve(row);
-      });
-    });
+  async get(sql, params = []) {
+    const result = await this.pool.query(sql, params);
+    return result.rows[0];
   }
 
   /**
    * Get all rows
    */
-  all(sql, params = []) {
-    return new Promise((resolve, reject) => {
-      this.db.all(sql, params, (err, rows) => {
-        if (err) reject(err);
-        else resolve(rows);
-      });
-    });
+  async all(sql, params = []) {
+    const result = await this.pool.query(sql, params);
+    return result.rows;
   }
 
   /**
    * Close database connection
    */
-  close() {
-    return new Promise((resolve, reject) => {
-      this.db.close((err) => {
-        if (err) reject(err);
-        else {
-          console.log("Database connection closed");
-          resolve();
-        }
-      });
-    });
+  async close() {
+    try {
+      await this.pool.end();
+      console.log("Database connection closed");
+    } catch (err) {
+      console.error("Error closing database connection:", err);
+      throw err;
+    }
   }
 }
 
 // Export singleton instance
-module.exports = new Database();
+const dbInstance = new Database();
+module.exports = dbInstance;

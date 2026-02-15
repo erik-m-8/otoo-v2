@@ -12,22 +12,18 @@ class MessageService {
   }
 
   async processData(data) {
-    for (const guildId of this.guilds) {
-      const config = await db.get(
-        "SELECT channel_id, hide_non_roles FROM guild_config WHERE guild_id = ?",
-        [guildId],
-      );
-      const content = this.buildContent(data, guildId, config.hide_non_roles);
+    for (const guild of this.guilds) {
+      const content = this.buildContent(data, guild.id, guild.hideNonRoles);
 
-      if (!config || !config.channel_id) {
-        console.warn(`⚠ No channel configured for guild ${guildId}`);
+      if (!guild || !guild.channelId) {
+        console.warn(`⚠ No channel configured for guild ${guild.id}`);
         continue;
       }
       if (!content) {
-        console.log(`ℹ No content to send for guild ${guildId}`);
+        console.log(`ℹ No content to send for guild ${guild.id}`);
         continue;
       }
-      this.sendMessage(config.channel_id, content);
+      this.sendMessage(guild.channelId, content);
     }
   }
 

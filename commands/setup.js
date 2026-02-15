@@ -47,10 +47,10 @@ module.exports = {
 
           await db.run(
             `
-            INSERT INTO guild_config (guild_id, channel_id)
-            VALUES (?, ?)
+            INSERT INTO guild_config (guild_id, channel_id, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP)
             ON CONFLICT(guild_id)
-            DO UPDATE SET channel_id = excluded.channel_id
+            DO UPDATE SET channel_id = $2, updated_at = CURRENT_TIMESTAMP
             `,
             [guildId, channel.id],
           );
@@ -63,7 +63,7 @@ module.exports = {
 
         case "view": {
           const config = await db.get(
-            "SELECT channel_id, hide_non_roles FROM guild_config WHERE guild_id = ?",
+            "SELECT channel_id, hide_non_roles FROM guild_config WHERE guild_id = $1",
             [guildId],
           );
 
@@ -85,10 +85,10 @@ module.exports = {
           console.log(hide);
           await db.run(
             `
-            INSERT INTO guild_config (guild_id, hide_non_roles)
-            VALUES (?, ?)
+            INSERT INTO guild_config (guild_id, hide_non_roles, updated_at)
+            VALUES ($1, $2, CURRENT_TIMESTAMP)
             ON CONFLICT(guild_id)
-            DO UPDATE SET hide_non_roles = excluded.hide_non_roles
+            DO UPDATE SET hide_non_roles = $2, updated_at = CURRENT_TIMESTAMP
             `,
             [guildId, hide],
           );
@@ -100,7 +100,7 @@ module.exports = {
         }
 
         case "reset": {
-          await db.run("DELETE FROM guild_config WHERE guild_id = ?", [
+          await db.run("DELETE FROM guild_config WHERE guild_id = $1", [
             guildId,
           ]);
 
