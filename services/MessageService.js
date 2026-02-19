@@ -23,7 +23,11 @@ class MessageService {
         console.log(`ℹ No content to send for guild ${guild.id}`);
         continue;
       }
-      this.sendMessage(guild.channelId, content);
+      try {
+        this.sendMessage(guild.channelId, content);
+      } catch (error) {
+        console.error(`❌ Failed to send message to ${guild.channelId}:`, error.message);
+      }
     }
   }
 
@@ -66,7 +70,6 @@ class MessageService {
         `❌ Failed to send message to ${channelId}:`,
         error.message,
       );
-      throw error;
     }
   }
 
