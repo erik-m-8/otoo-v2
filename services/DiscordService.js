@@ -47,8 +47,6 @@ class DiscordService {
           const discordGuild = await this.client.guilds.fetch(guild.id);
           this.guilds.set(discordGuild.id, {
             id: discordGuild.id,
-            channelId: config.channel_id,
-            hideNonRoles: config.hide_non_roles,
             name: discordGuild.name,
             loadedAt: new Date(),
           });
