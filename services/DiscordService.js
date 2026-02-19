@@ -23,6 +23,15 @@ class DiscordService {
       ],
     });
     this.client.commands = new Collection();
+    this.client.guildStore = this.guilds;
+    
+    this.client.updateGuildStore = async (guildId, updates) => {
+      const guild = this.guilds.get(guildId);
+      if (guild) {
+        Object.assign(guild, updates);
+      }
+    };
+    
     this.setupEvents();
     this.loadCommands();
   }
@@ -211,6 +220,10 @@ class DiscordService {
     } catch (error) {
       console.error("Error deploying commands:", error);
     }
+  }
+
+  camelToSnake(str) {
+    return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
   }
 
   async handleAblyMessage(data) {

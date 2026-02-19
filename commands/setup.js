@@ -54,7 +54,7 @@ module.exports = {
             `,
             [guildId, channel.id],
           );
-
+          await interaction.client.updateGuildStore(guildId, { channelId: channel.id });
           await interaction.reply(
             `✅ Bot messages will now be sent to ${channel}`,
           );
@@ -82,7 +82,6 @@ module.exports = {
 
         case "hide": {
           const hide = interaction.options.getBoolean("hide");
-          console.log(hide);
           await db.run(
             `
             INSERT INTO guild_config (guild_id, hide_non_roles, updated_at)
@@ -92,7 +91,7 @@ module.exports = {
             `,
             [guildId, hide],
           );
-
+          await interaction.client.updateGuildStore(guildId, { hideNonRoles: hide });
           await interaction.reply(
             `✅ Non-role items will ${hide ? "be hidden" : "not be hidden"} in messages. ${hide}`,
           );
@@ -100,10 +99,16 @@ module.exports = {
         }
 
         case "reset": {
-          await db.run("DELETE FROM guild_config WHERE guild_id = $1", [
-            guildId,
-          ]);
-
+          await db.run(
+            `
+            INSERT INTO guild_config (guild_id, hide_non_roles, channel_id, updated_at)
+            VALUES ($1, $2, $3, CURRENT_TIMESTAMP)
+            ON CONFLICT(guild_id)
+            DO UPDATE SET hide_non_roles = $2, channel_id = $3, updated_at = CURRENT_TIMESTAMP
+            `,
+            [guildId, null, null],
+          );
+          await interaction.client.updateGuildStore(guildId, { hideNonRoles: false, channelId: null });
           await interaction.reply("♻️ Configuration has been reset.");
           break;
         }
